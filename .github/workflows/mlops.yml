@@ -9,6 +9,7 @@ on:
       - 'params.yaml'
       - 'tests/**.py'
       - 'requirements.txt'
+      - '.github/workflows/mlops.yml'
   workflow_dispatch:
 
 jobs:
