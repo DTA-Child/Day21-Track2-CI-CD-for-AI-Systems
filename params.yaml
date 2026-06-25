@@ -6,6 +6,3 @@ min_samples_split: 2
 class_weight: balanced_subsample
 criterion: entropy
 random_state: 7
-class_weight: balanced_subsample
-criterion: entropy
-random_state: 7
