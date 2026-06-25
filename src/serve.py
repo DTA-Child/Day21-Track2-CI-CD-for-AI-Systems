@@ -1,4 +1,6 @@
 import os
+import numpy as np
+import pandas as pd
 import boto3
 import joblib
 from fastapi import FastAPI, HTTPException
@@ -9,6 +11,25 @@ app = FastAPI()
 S3_BUCKET = os.environ["S3_BUCKET"]
 S3_MODEL_KEY = "models/latest/model.pkl"
 MODEL_PATH = os.path.expanduser("~/models/model.pkl")
+
+FEATURE_NAMES = [
+    "fixed acidity", "volatile acidity", "citric acid", "residual sugar",
+    "chlorides", "free sulfur dioxide", "total sulfur dioxide", "density",
+    "pH", "sulphates", "alcohol", "wine_type",
+]
+
+
+def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Tao them dac trung tu du lieu Wine Quality (giong nhu trong train.py)."""
+    df = df.copy()
+    df["log_residual_sugar"] = np.log1p(df["residual sugar"])
+    df["log_chlorides"] = np.log1p(df["chlorides"])
+    df["log_free_sulfur_dioxide"] = np.log1p(df["free sulfur dioxide"])
+    df["log_total_sulfur_dioxide"] = np.log1p(df["total sulfur dioxide"])
+    df["free_total_so2_ratio"] = df["free sulfur dioxide"] / (df["total sulfur dioxide"] + 1e-6)
+    df["alcohol_density"] = df["alcohol"] / df["density"]
+    df["acid_ph"] = (df["fixed acidity"] + df["volatile acidity"]) / df["pH"]
+    return df
 
 
 def download_model():
@@ -44,7 +65,9 @@ def predict(req: PredictRequest):
     if len(req.features) != 12:
         raise HTTPException(status_code=400, detail="Expected 12 features")
 
-    pred = int(model.predict([req.features])[0])
+    df = pd.DataFrame([req.features], columns=FEATURE_NAMES)
+    df = engineer_features(df)
+    pred = int(model.predict(df)[0])
     labels = {0: "thap", 1: "trung_binh", 2: "cao"}
     return {"prediction": pred, "label": labels[pred]}
 
