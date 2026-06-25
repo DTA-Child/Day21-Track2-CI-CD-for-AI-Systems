@@ -1,5 +1,11 @@
 # Sieu tham so cho mo hinh RandomForestClassifier
 # Thay doi cac gia tri nay giua cac lan chay de thi nghiem (Buoc 1)
-n_estimators: 800
-max_depth: 25
-min_samples_split: 4
+n_estimators: 100
+max_depth: 20
+min_samples_split: 2
+class_weight: balanced_subsample
+criterion: entropy
+random_state: 7
+class_weight: balanced_subsample
+criterion: entropy
+random_state: 7

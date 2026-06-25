@@ -1,5 +1,6 @@
 import mlflow
 import mlflow.sklearn
+import numpy as np
 import pandas as pd
 import yaml
 import json
@@ -26,6 +27,27 @@ def _ensure_experiment():
         mlflow.set_experiment(experiment_name)
 
 
+def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Tao them dac trung tu du lieu Wine Quality de cai thien do chinh xac.
+    Ho tro ca ten cot co dau cach (tu file CSV goc) va dau gach duoi (tu test).
+    """
+    df = df.copy()
+
+    # Chuẩn hóa tên cột: dùng tên có dấu cách để tính toán
+    col_map = {c: c.replace("_", " ") for c in df.columns}
+    df_renamed = df.rename(columns=col_map)
+
+    df["log_residual_sugar"] = np.log1p(df_renamed["residual sugar"])
+    df["log_chlorides"] = np.log1p(df_renamed["chlorides"])
+    df["log_free_sulfur_dioxide"] = np.log1p(df_renamed["free sulfur dioxide"])
+    df["log_total_sulfur_dioxide"] = np.log1p(df_renamed["total sulfur dioxide"])
+    df["free_total_so2_ratio"] = df_renamed["free sulfur dioxide"] / (df_renamed["total sulfur dioxide"] + 1e-6)
+    df["alcohol_density"] = df_renamed["alcohol"] / df_renamed["density"]
+    df["acid_ph"] = (df_renamed["fixed acidity"] + df_renamed["volatile acidity"]) / df_renamed["pH"]
+    return df
+
+
 def train(
     params: dict,
     data_path: str = "data/train_phase1.csv",
@@ -46,6 +68,9 @@ def train(
     df_train = pd.read_csv(data_path)
     df_eval = pd.read_csv(eval_path)
 
+    df_train = engineer_features(df_train)
+    df_eval = engineer_features(df_eval)
+
     X_train = df_train.drop(columns=["target"])
     y_train = df_train["target"]
     X_eval = df_eval.drop(columns=["target"])
@@ -56,7 +81,7 @@ def train(
     with mlflow.start_run():
         mlflow.log_params(params)
 
-        model = RandomForestClassifier(**params, random_state=42)
+        model = RandomForestClassifier(**params)
         model.fit(X_train, y_train)
 
         preds = model.predict(X_eval)
