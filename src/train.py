@@ -11,6 +11,21 @@ from sklearn.metrics import accuracy_score, f1_score
 EVAL_THRESHOLD = 0.70
 
 
+def _ensure_experiment():
+    """
+    Dam bao MLflow dung artifact location cuc bo khi tracking URI la sqlite.
+    Neu khong, mlflow.sklearn.log_model se gap loi 'mlflow-artifacts' scheme.
+    """
+    tracking_uri = mlflow.get_tracking_uri()
+    if tracking_uri and tracking_uri.startswith("sqlite"):
+        experiment_name = "wine_quality"
+        artifact_location = "file://" + os.path.abspath("mlartifacts")
+        experiment = mlflow.get_experiment_by_name(experiment_name)
+        if experiment is None:
+            mlflow.create_experiment(experiment_name, artifact_location=artifact_location)
+        mlflow.set_experiment(experiment_name)
+
+
 def train(
     params: dict,
     data_path: str = "data/train_phase1.csv",
@@ -35,6 +50,8 @@ def train(
     y_train = df_train["target"]
     X_eval = df_eval.drop(columns=["target"])
     y_eval = df_eval["target"]
+
+    _ensure_experiment()
 
     with mlflow.start_run():
         mlflow.log_params(params)
